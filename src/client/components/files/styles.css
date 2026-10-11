@@ -1,0 +1,51 @@
+.dpd-filebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+.dpd-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+}
+.dpd-entry {
+  display: flex !important;
+  width: 100%;
+  text-align: left;
+  gap: 7px;
+  align-items: center;
+  padding-block: 6px !important;
+  padding-inline-end: 8px !important;
+  padding-inline-start: 8px;
+  border-radius: 6px !important;
+}
+.dpd-entry span:last-child {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.dpd-preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px/1.65 ui-monospace,
+    monospace;
+  margin: 0;
+  padding: 12px;
+  color: var(--dsw-alias-label-primary);
+}
+.dpd-filebar {
+  height: 36px;
+  padding: 0 8px;
+  border-bottom: 0;
+}
+.dpd-entry {
+  height: 28px;
+  font-size: 13px;
+}

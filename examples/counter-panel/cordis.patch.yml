@@ -1,0 +1,3 @@
+- insert:
+    - id: local-draggable-panels-example
+      name: '@local/draggable-panels-example'

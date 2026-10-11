@@ -1,0 +1,51 @@
+{
+  "name": "dsh-draggable-panels",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "description": "Extensible draggable sidebar components with workspace, files and interactive terminals",
+  "license": "MIT",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./dist/locale/*.json"
+  },
+  "files": [
+    "dist",
+    "client.js",
+    "cordis.patch.yml",
+    "docs",
+    "examples"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "npm run build && node --test tests/unit/*.test.mjs tests/integration/*.test.mjs",
+    "format": "prettier --write \"src/**/*.{js,css,json}\" \"tests/**/*.mjs\" \"scripts/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{js,css,json}\" \"tests/**/*.mjs\" \"scripts/build.mjs\""
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-api-terminal-controller"
+      ]
+    }
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "prettier": "3.9.10"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/xterm": "5.5.0"
+  }
+}
