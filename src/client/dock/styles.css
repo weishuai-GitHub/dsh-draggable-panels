@@ -1,3 +1,55 @@
+.dpd-native-file-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.dpd-native-drag-grip {
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+}
+/* An explicitly marked plugin-owned drop surface, not guessed native bounds. */
+.dpd-native-drop-rail {
+  position: fixed;
+  right: 12px;
+  top: max(64px, var(--dsh-frame-overlay-top, 64px));
+  bottom: 12px;
+  width: clamp(120px, 24vw, 360px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none;
+  z-index: 1190;
+  border: 2px dashed var(--dsw-alias-brand-primary);
+  border-radius: 12px;
+  color: var(--dsw-alias-label-primary);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 85%, transparent);
+}
+.dpd-native-drop-rail[data-over] {
+  border-style: solid;
+  background: color-mix(
+    in srgb,
+    var(--dsw-alias-brand-primary) 20%,
+    var(--dsw-alias-bg-base)
+  );
+}
+.dpd-native-file-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.dpd-native-files-target {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
 .dpd-context-surface {
   position: fixed;
   inset: 0;

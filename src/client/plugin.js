@@ -18,6 +18,7 @@ import { registerWorkspace } from "./components/workspace/index.js";
 import { registerFiles } from "./components/files/index.js";
 import { registerTerminal } from "./components/terminal/index.js";
 import { registerSlots } from "./integration/slots.js";
+import { createNativeFiles } from "./integration/native-files.js";
 import zh from "./locales/zh.json";
 import en from "./locales/en.json";
 import commonStyles from "./shared/styles.css";
@@ -38,6 +39,7 @@ export function createPlugin(React) {
       "sessions",
       "remote",
       "remote.workspaceFiles",
+      "remote.session",
     ],
     apply(ctx) {
       const t = ctx.locale.bind("local.draggablePanels");
@@ -102,9 +104,15 @@ export function createPlugin(React) {
         if (!writeJSON(localStorage, LAYOUT_KEY, next))
           notice.set(t("storage"));
       }
+      let nativeFiles;
+      let revealNativeRight = () => {};
       function setRightShown(next) {
         rightShown.set(!!next);
         writeJSON(localStorage, VISIBILITY_KEY, !!next);
+        if (nativeFiles?.available.getSnapshot()) {
+          nativeFiles.setShown(!!next);
+          if (next) revealNativeRight();
+        }
       }
       const recover = () => nativeMode.set(false);
       const toNative = () => {
@@ -192,6 +200,8 @@ export function createPlugin(React) {
           ),
         fail: (error) => error?.message || error?.code || String(error),
       };
+      nativeFiles = createNativeFiles(React, env);
+      env.nativeFiles = nativeFiles;
       registerWorkspace(React, env, service);
       registerFiles(React, env, service);
       registerTerminal(React, env, service);
@@ -249,7 +259,58 @@ export function createPlugin(React) {
           model.selectPanel(state, side, id, registry.getSnapshot()),
         ...createPointerHelpers(),
       });
-      registerSlots(ctx, nativeMode, components);
+      revealNativeRight = () => {
+        if (!nativeFiles.available.getSnapshot() || nativeMode.getSnapshot())
+          return;
+        const state = layout.getSnapshot();
+        if (state.active.right === "files" && !state.hidden.includes("files"))
+          nativeFiles.openFiles();
+        else {
+          const id = state.active.right;
+          const entry = registry.getSnapshot().find((entry) => entry.id === id);
+          if (entry && !state.hidden.includes(id))
+            nativeFiles.openPanel(
+              id,
+              () => titleOf(entry),
+              components.NativePanel(id),
+            );
+        }
+      };
+      // React's bridge flushes these requests only after the native seat is mounted.
+      let previousRight;
+      const syncNativeRight = () => {
+        const state = layout.getSnapshot();
+        const entries = registry.getSnapshot();
+        const rightIds = model.visiblePanelIds(state, "right", entries);
+        nativeFiles.setPlacement({
+          enabled: !nativeMode.getSnapshot(),
+          filesRight: rightIds.includes("files"),
+          rightIds,
+          panels: entries
+            .filter((entry) => entry.id !== "files")
+            .map((entry) => ({
+              id: entry.id,
+              title: () => titleOf(entry),
+              Component: components.NativePanel(entry.id),
+            })),
+        });
+        const next = `${nativeFiles.available.getSnapshot()}:${nativeMode.getSnapshot()}:${rightShown.getSnapshot()}:${state.active.right}`;
+        if (next === previousRight) return;
+        previousRight = next;
+        if (rightShown.getSnapshot()) revealNativeRight();
+      };
+      ctx.effect(() => {
+        const offs = [
+          layout,
+          nativeMode,
+          rightShown,
+          nativeFiles.available,
+          registry,
+        ].map((store) => store.subscribe(syncNativeRight));
+        syncNativeRight();
+        return () => offs.forEach((off) => off());
+      }, "native right panel navigation");
+      registerSlots(ctx, nativeMode, components, nativeFiles);
       ctx.effect(
         () => () => {
           components.dispose();

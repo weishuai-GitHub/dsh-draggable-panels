@@ -1,6 +1,6 @@
 {
   "name": "dsh-draggable-panels",
-  "version": "0.7.0",
+  "version": "0.7.6",
   "private": true,
   "type": "module",
   "description": "Extensible draggable sidebar components with workspace, files and interactive terminals",
@@ -32,6 +32,7 @@
       "platform": "web",
       "immediately": true,
       "inject": [
+        "@deepseek-ai/dsh-client-ui-primitives",
         "@deepseek-ai/dsh-client-ui-workspace",
         "@deepseek-ai/dsh-client-ui-sidebar",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
@@ -41,11 +42,14 @@
     }
   },
   "devDependencies": {
+    "dsh-better-sidebar": "0.25.0",
     "esbuild": "0.28.2",
     "prettier": "3.9.10"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.10.0",
-    "@xterm/xterm": "5.5.0"
+    "@xterm/xterm": "5.5.0",
+    "highlight.js": "11.11.1",
+    "marked": "15.0.12"
   }
 }

@@ -1,4 +1,8 @@
 import { createFilesStore } from "./store.js";
+import { fileLanguage, highlightCode, renderMarkdown } from "./render.js";
+import styles from "./styles.css";
+
+import { createFileTabs } from "./tabs.js";
 export function createFilesComponent(
   React,
   { ctx, atom, current, useCopy, useAtom, Icon },
@@ -8,6 +12,148 @@ export function createFilesComponent(
     ctx,
     atom,
   );
+  const navigation = new Map();
+  const tabs = createFileTabs({
+    atom,
+    read: previewFile,
+    register(doc) {
+      return ctx.slots.inject("conversation.view", () =>
+        ctx.slots.register(
+          {
+            name: "conversation.view",
+            id: doc.id,
+            order: 20,
+            label: doc.path.split(/[/\\]/).pop(),
+          },
+          (props) => h(DocumentView, { ...props, doc }),
+        ),
+      );
+    },
+  });
+  function openFile(_cache, sessionId, path) {
+    const doc = tabs.open(sessionId, path);
+    navigation.get(sessionId)?.(doc.id, "");
+  }
+  function SessionTabs(props) {
+    const list = props.useSessions((s) => s);
+    const sessionId = current(list)?.id;
+    React.useLayoutEffect(() => tabs.selectSession(sessionId), [sessionId]);
+    return null;
+  }
+  function DocumentView({ doc, sessionId, openView }) {
+    const tt = useCopy();
+    React.useEffect(() => {
+      navigation.set(sessionId, openView);
+      return () => {
+        if (navigation.get(sessionId) === openView)
+          navigation.delete(sessionId);
+      };
+    }, [sessionId, openView]);
+    if (doc.sessionId !== sessionId) return null;
+    return h(
+      "section",
+      { className: "dpd-file-main" },
+      h("style", null, styles),
+      h(
+        "div",
+        {
+          className: "dpd-document-actions",
+          role: "toolbar",
+          "aria-label": doc.path,
+        },
+        h(
+          "button",
+          { type: "button", onClick: () => openView("chat", "") },
+          tt("backToChat"),
+        ),
+        h(
+          "button",
+          {
+            "aria-label": `${tt("close")} ${doc.path}`,
+            onClick: () => {
+              tabs.close(doc);
+            },
+          },
+          tt("close"),
+        ),
+      ),
+      h(FilePreview, { cache: doc.cache, sessionId, key: doc.id }),
+    );
+  }
+  function FilePreview({ cache, sessionId }) {
+    const { preview: p } = useAtom(cache);
+    const tt = useCopy();
+    const [source, setSource] = React.useState(false);
+    React.useEffect(() => setSource(false), [p?.path]);
+    const language = fileLanguage(p?.path);
+    const html = React.useMemo(
+      () =>
+        language === "markdown" && !source
+          ? renderMarkdown(p?.text || "")
+          : highlightCode(p?.text || "", language),
+      [p?.text, language, source],
+    );
+    if (!p) return null;
+    return h(
+      React.Fragment,
+      null,
+      h(
+        "div",
+        { className: "dpd-filebar" },
+        h("span", { className: "dpd-path", title: p.path }, p.path),
+        language === "markdown"
+          ? h(
+              "button",
+              { "aria-pressed": source, onClick: () => setSource(!source) },
+              tt(source ? "rendered" : "source"),
+            )
+          : null,
+        h(
+          "button",
+          {
+            disabled: p.loading,
+            onClick: () => previewFile(cache, sessionId, p.path),
+          },
+          tt("refresh"),
+        ),
+      ),
+      h(
+        "div",
+        { className: "dpd-file-content", key: p.path },
+        p.error
+          ? h(
+              "div",
+              { className: "dpd-message dpd-error", role: "alert" },
+              p.error,
+              h("p", null, tt("fileLimit")),
+            )
+          : null,
+        language === "markdown" && !source
+          ? h("article", {
+              className: "dpd-markdown",
+              dangerouslySetInnerHTML: { __html: html },
+            })
+          : h(
+              "pre",
+              { className: "dpd-preview" },
+              h("code", { dangerouslySetInnerHTML: { __html: html } }),
+            ),
+        p.loading
+          ? h(
+              "div",
+              { className: "dpd-message", role: "status" },
+              tt("loading"),
+            )
+          : !p.eof && !p.error
+            ? h(
+                "button",
+                { onClick: () => previewFile(cache, sessionId, p.path, true) },
+                tt("more"),
+              )
+            : null,
+      ),
+    );
+  }
   function FilesPanel(props) {
     const list = props.useSessions((s) => s);
     const session = props.sessionId
@@ -23,6 +169,34 @@ export function createFilesComponent(
       cache: cacheFor(session.id, session.cwd),
     });
   }
+  function OpenFiles({ sessionId }) {
+    const docs = useAtom(tabs.snapshot).filter(
+      (doc) => doc.sessionId === sessionId,
+    );
+    const tt = useCopy();
+    if (!docs.length) return null;
+    return h(
+      "div",
+      { className: "dpd-open-files" },
+      docs.map((doc) =>
+        h(
+          "div",
+          { className: "dpd-open-file", key: doc.id },
+          h("span", { title: doc.path }, doc.path.split(/[/\\]/).pop()),
+          h(
+            "button",
+            {
+              type: "button",
+              title: `${tt("close")} ${doc.path}`,
+              "aria-label": `${tt("close")} ${doc.path}`,
+              onClick: () => tabs.close(doc),
+            },
+            "×",
+          ),
+        ),
+      ),
+    );
+  }
   function FileTree({ sessionId, root, cache }) {
     const tt = useCopy();
     const state = useAtom(cache);
@@ -34,7 +208,7 @@ export function createFilesComponent(
     React.useLayoutEffect(() => {
       if (scrollRef.current)
         scrollRef.current.scrollTop = cache.getSnapshot().scroll;
-    }, [cache, !!state.preview]);
+    }, [cache]);
     function toggle(path) {
       const v = cache.getSnapshot();
       const open = !v.expanded[path];
@@ -84,9 +258,7 @@ export function createFilesComponent(
                   ? !!state.expanded[child]
                   : undefined,
                 onClick: () =>
-                  directory
-                    ? toggle(child)
-                    : previewFile(cache, sessionId, child),
+                  directory ? toggle(child) : openFile(cache, sessionId, child),
               },
               h(Icon, {
                 kind: directory
@@ -115,42 +287,24 @@ export function createFilesComponent(
           : null,
       );
     }
-    const p = state.preview;
     return h(
       React.Fragment,
       null,
+      h(OpenFiles, { sessionId }),
       h(
         "div",
         { className: "dpd-filebar" },
-        p
-          ? h(
-              "button",
-              {
-                title: tt("back"),
-                "aria-label": tt("back"),
-                onClick: () =>
-                  cache.set({ ...cache.getSnapshot(), preview: null }),
-              },
-              h(Icon, { kind: "back" }),
-            )
-          : null,
-        h(
-          "span",
-          { className: "dpd-path", title: p?.path || root },
-          p?.path || root,
-        ),
+        h("span", { className: "dpd-path", title: root }, root),
         h(
           "button",
           {
             title: tt("refresh"),
             "aria-label": tt("refresh"),
             onClick: () => {
-              if (p) previewFile(cache, sessionId, p.path);
-              else
-                for (const path of Object.keys(state.expanded).filter(
-                  (x) => state.expanded[x],
-                ))
-                  loadDirectory(cache, sessionId, path);
+              for (const path of Object.keys(state.expanded).filter(
+                (x) => state.expanded[x],
+              ))
+                loadDirectory(cache, sessionId, path);
             },
           },
           h(Icon, { kind: "refresh" }),
@@ -162,43 +316,24 @@ export function createFilesComponent(
           className: "dpd-scroll",
           ref: scrollRef,
           onScroll: (e) => {
-            if (!p)
-              cache.set({
-                ...cache.getSnapshot(),
-                scroll: e.currentTarget.scrollTop,
-              });
+            cache.set({
+              ...cache.getSnapshot(),
+              scroll: e.currentTarget.scrollTop,
+            });
           },
         },
-        p
-          ? h(
-              React.Fragment,
-              null,
-              p.error
-                ? h(
-                    "div",
-                    { className: "dpd-message dpd-error" },
-                    p.error,
-                    h("p", null, tt("fileLimit")),
-                  )
-                : null,
-              h("pre", { className: "dpd-preview" }, p.text || ""),
-              p.loading
-                ? h("div", { className: "dpd-message" }, tt("loading"))
-                : !p.eof && !p.error
-                  ? h(
-                      "button",
-                      {
-                        onClick: () =>
-                          previewFile(cache, sessionId, p.path, true),
-                      },
-                      tt("more"),
-                    )
-                  : null,
-            )
-          : level(root, 0),
+        level(root, 0),
       ),
     );
   }
 
-  return { FilesPanel, dispose };
+  return {
+    FilesPanel,
+    SessionTabs,
+    dispose() {
+      tabs.dispose();
+      navigation.clear();
+      dispose();
+    },
+  };
 }

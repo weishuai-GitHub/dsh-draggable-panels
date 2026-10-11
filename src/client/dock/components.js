@@ -43,6 +43,7 @@ export function createDockComponents(React, env) {
   const Icon = env.Icon;
   const Boundary = createPanelBoundary(React);
   const AnchoredMenu = createAnchoredMenu(React);
+  const hostProps = env.atom(null);
   const popup = env.atom(null);
   const manager = env.atom(false);
   const identities = new WeakMap();
@@ -82,14 +83,18 @@ export function createDockComponents(React, env) {
     env.show(id);
     if (layout.getSnapshot().left.includes(id)) leftExpansion?.();
   }
-  function Dock({ side, collapsed = false, ...props }) {
+  function Dock({ side, collapsed = false, nativeDock = false, ...props }) {
     const tt = useCopy();
     const value = useAtom(layout);
     const entries = useAtom(env.registry);
     const dragging = useAtom(drag);
     const error = useAtom(notice);
-    const ids = env.visibleIds(value, side);
-    const selected = value.active[side];
+    const ids = env
+      .visibleIds(value, side)
+      .filter((id) => !nativeDock || id !== "files");
+    const selected = ids.includes(value.active[side])
+      ? value.active[side]
+      : ids[0];
     const over = dragging?.target?.side === side;
     const entry = entries.find((item) => item.id === selected);
     const integrated = ids.length === 1 && entry?.integratedHeader;
@@ -316,6 +321,9 @@ export function createDockComponents(React, env) {
   }
   function Left(props) {
     React.useLayoutEffect(() => {
+      hostProps.set(props);
+    }, [props]);
+    React.useLayoutEffect(() => {
       leftExpansion = props.expandSidebar;
       env.setLeftExpansion(leftExpansion);
       return () => {
@@ -345,6 +353,170 @@ export function createDockComponents(React, env) {
         style: fullscreen ? undefined : { width: props.width || 320 },
       },
       h(Dock, { ...props, side: "right" }),
+    );
+  }
+  // One native tab per component. Never put another tab strip inside it.
+  const nativePanels = new Map();
+  function NativePanel(id) {
+    if (!nativePanels.has(id))
+      nativePanels.set(id, function NativePanelBody(props) {
+        const shared = useAtom(hostProps);
+        const entries = useAtom(env.registry);
+        const definition = entries.find((entry) => entry.id === id);
+        if (!shared || !definition) return null;
+        return h(
+          "section",
+          { className: "dpd-root", "data-dpd-native-panel": id },
+          h(
+            Boundary,
+            {
+              message: `${title(id)}: ${t("componentError")}`,
+              retry: t("retry"),
+            },
+            h(definition.component, {
+              ...shared,
+              ...props,
+              panelId: id,
+              side: "right",
+              isActive: props.visible !== false,
+            }),
+          ),
+        );
+      });
+    return nativePanels.get(id);
+  }
+  function nativePanelId(kind) {
+    return kind?.startsWith("local.draggablePanels:panel:")
+      ? kind.slice("local.draggablePanels:panel:".length)
+      : "files";
+  }
+  // These are our own title nodes and drop surfaces. Never inspect or replace
+  // the native rightbar body just to discover its geometry.
+  function NativeFileTitle({ useTabInfo }) {
+    const tt = useCopy();
+    const { tab } = useTabInfo();
+    const id = nativePanelId(tab.kind);
+    const state = useAtom(layout);
+    const ref = React.useRef(null);
+    const setRef = React.useCallback((node) => {
+      revealRef(node, ref.current);
+      ref.current = node;
+    }, []);
+    return h(
+      "span",
+      {
+        ref: setRef,
+        className: "dpd-native-file-title",
+        "data-dpd-native-files-drag": id === "files" ? "" : undefined,
+        "data-dpd-native-panel-drag": id,
+        title: tt("nativeSort"),
+      },
+      h(
+        "span",
+        {
+          className: "dpd-native-drag-grip",
+          "data-dpd-native-cross-side-grip": id,
+          title: tt("crossSideDrag"),
+          onPointerDown: (e) => {
+            if (e.button !== 0 || !e.isPrimary) return;
+            // Only the grip owns cross-sidebar moves. The remaining title bubbles
+            // to the native docking kit, which owns actual tab order/persistence.
+            e.stopPropagation();
+            startDrag(e, id, state.left.includes(id) ? "left" : "right");
+          },
+          onDragStart: (e) => e.preventDefault(),
+          onClick: (e) => {
+            if (suppressClicks.has(e.currentTarget)) {
+              suppressClicks.delete(e.currentTarget);
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          },
+        },
+        h(Icon, { kind: "grip", size: 14 }),
+      ),
+      panelIcon(find(id), 15),
+      tab.title || title(id),
+    );
+  }
+  function NativeDropRail() {
+    const tt = useCopy();
+    const mode = useAtom(nativeMode);
+    const enabled = useAtom(env.nativeFiles.available);
+    const dragging = useAtom(drag);
+    const ref = React.useRef(null);
+    const setRef = React.useCallback((node) => {
+      revealRef(node, ref.current);
+      ref.current = node;
+    }, []);
+    if (mode || !enabled || !dragging) return null;
+    return h(
+      "div",
+      {
+        ref: setRef,
+        className: "dpd-native-drop-rail",
+        "data-dpd-drop-right": "",
+        "data-over": dragging.target?.side === "right" ? "" : undefined,
+        "aria-hidden": true,
+      },
+      tt("dropRight"),
+    );
+  }
+  function NativeFileMenu({ tab, dismiss }) {
+    const tt = useCopy();
+    const mode = useAtom(nativeMode);
+    const enabled = useAtom(env.nativeFiles.available);
+    if (
+      mode ||
+      !enabled ||
+      !(
+        tab.kind === "files" ||
+        tab.kind?.startsWith("local.draggablePanels:panel:")
+      )
+    )
+      return null;
+    const id = nativePanelId(tab.kind);
+    return h(
+      React.Fragment,
+      null,
+      h(
+        "button",
+        {
+          type: "button",
+          role: "menuitem",
+          onClick: () => {
+            move(id, "left");
+            show(id);
+            dismiss();
+          },
+        },
+        tt("moveLeft"),
+      ),
+      h(
+        "button",
+        {
+          type: "button",
+          role: "menuitem",
+          onClick: () => {
+            move(id, "right");
+            show(id);
+            dismiss();
+          },
+        },
+        tt("moveRight"),
+      ),
+      h(
+        "button",
+        {
+          type: "button",
+          role: "menuitem",
+          onClick: () => {
+            manager.set(true);
+            dismiss();
+          },
+        },
+        tt("manageComponents"),
+      ),
     );
   }
   function HeaderCorner() {
@@ -395,6 +567,10 @@ export function createDockComponents(React, env) {
   function Tools({ wide }) {
     const tt = useCopy();
     const mode = useAtom(nativeMode);
+    const nativeFilesEnabled = env.nativeFiles
+      ? useAtom(env.nativeFiles.available)
+      : false;
+    const panelLayout = useAtom(layout);
     const shown = useAtom(rightShown);
     const dragging = useAtom(drag);
     const ref = React.useRef(null);
@@ -405,6 +581,40 @@ export function createDockComponents(React, env) {
     return h(
       "div",
       { className: "dpd-tools", "data-rail": !wide ? "" : undefined },
+      nativeFilesEnabled && !mode
+        ? h(
+            "button",
+            {
+              type: "button",
+              className: "dpd-icon-button",
+              title: tt("nativeFilesDrag"),
+              "aria-label": tt("nativeFilesDrag"),
+              style: { cursor: "grab", touchAction: "none" },
+              onPointerDown: (e) =>
+                startDrag(
+                  e,
+                  "files",
+                  panelLayout.left.includes("files") ? "left" : "right",
+                ),
+              onClick: (e) => {
+                if (suppressClicks.has(e.currentTarget)) {
+                  suppressClicks.delete(e.currentTarget);
+                  return;
+                }
+                show("files");
+              },
+              onContextMenu: (e) => openMenu(e, "files"),
+              onKeyDown: (e) => {
+                if (e.altKey && ["ArrowLeft", "ArrowRight"].includes(e.key)) {
+                  e.preventDefault();
+                  move("files", e.key === "ArrowLeft" ? "left" : "right");
+                  show("files");
+                }
+              },
+            },
+            h(Icon, { kind: "files" }),
+          )
+        : null,
       h(
         "button",
         {
@@ -481,6 +691,8 @@ export function createDockComponents(React, env) {
       React.Fragment,
       null,
       h("style", null, css),
+      env.nativeFiles ? h(env.nativeFiles.Bridge) : null,
+      env.nativeFiles ? h(NativeDropRail) : null,
       mode && noticeShown
         ? h(
             "div",
@@ -559,8 +771,19 @@ export function createDockComponents(React, env) {
   function dispose() {
     off();
     controller.dispose();
+    hostProps.clear();
     popup.clear();
     manager.clear();
   }
-  return { Left, Right, HeaderCorner, Tools, Overlay, dispose };
+  return {
+    Left,
+    Right,
+    NativePanel,
+    NativeFileMenu,
+    NativeFileTitle,
+    HeaderCorner,
+    Tools,
+    Overlay,
+    dispose,
+  };
 }

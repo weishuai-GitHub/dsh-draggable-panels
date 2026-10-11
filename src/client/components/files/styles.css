@@ -1,3 +1,115 @@
+.dpd-document-actions {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 40px;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+.dpd-open-files {
+  flex-shrink: 0;
+  max-height: 160px;
+  overflow: auto;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+.dpd-open-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+}
+.dpd-open-file span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dpd-open-file button {
+  flex: 0 0 28px;
+  min-height: 28px;
+  font-size: 18px;
+}
+.dpd-file-main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  color: var(--dsw-alias-label-primary);
+}
+.dpd-file-main button {
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.dpd-file-main button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.dpd-file-main .dpd-filebar {
+  flex-shrink: 0;
+}
+.dpd-file-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+.dpd-file-content .dpd-preview {
+  white-space: pre;
+  overflow: auto;
+}
+.dpd-markdown {
+  max-width: 960px;
+  margin: auto;
+  padding: 12px 20px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.dpd-markdown pre {
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 6px;
+}
+.dpd-markdown table {
+  border-collapse: collapse;
+  display: block;
+  overflow: auto;
+}
+.dpd-markdown th,
+.dpd-markdown td {
+  padding: 6px 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+}
+.dpd-markdown blockquote {
+  margin-inline: 0;
+  padding-inline-start: 16px;
+  border-inline-start: 3px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-secondary);
+}
+.dpd-file-main .hljs-keyword,
+.dpd-file-main .hljs-literal {
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary);
+}
+.dpd-file-main .hljs-string,
+.dpd-file-main .hljs-number {
+  color: var(--dsw-alias-label-secondary);
+}
+.dpd-file-main .hljs-comment {
+  color: var(--dsw-alias-label-tertiary);
+  font-style: italic;
+}
+.dpd-file-main .hljs-attr,
+.dpd-file-main .hljs-title {
+  font-weight: 600;
+}
 .dpd-filebar {
   display: flex;
   align-items: center;

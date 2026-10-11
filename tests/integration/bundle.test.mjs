@@ -22,6 +22,10 @@ test("generated bundle mounts both docks and workspace controls without missing 
   }
   const React = {
     Component,
+    memo: (component) => component,
+    createContext: (value) => ({ value }),
+    useContext: (context) => context.value,
+    useMemo: (fn) => fn(),
     createElement: (type, props, ...children) => ({
       type,
       props: { ...props, children },
@@ -44,8 +48,21 @@ test("generated bundle mounts both docks and workspace controls without missing 
         load: ({ id, factory }) => {
           assert.equal(id, "dsh-draggable-panels");
           plugin = factory((name) => {
+            if (name === "react-dom")
+              return {
+                createPortal: (children, target) => ({
+                  type: "portal",
+                  props: { children, target },
+                }),
+              };
+            if (name === "@deepseek-ai/dsh-client-ui-primitives")
+              return new Proxy({}, { get: (_target, key) => key });
             assert.equal(name, "react");
-            return React;
+            return new Proxy(React, {
+              ownKeys() {
+                throw new Error("Host React exports must not be enumerated");
+              },
+            });
           });
         },
       },

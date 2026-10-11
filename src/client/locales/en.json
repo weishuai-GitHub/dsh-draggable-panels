@@ -1,6 +1,9 @@
 {
   "workspaces": "Workspaces",
   "files": "Files",
+  "nativePanels": "Draggable panels",
+  "nativeFilesLeft": "Left-side files",
+  "dropRight": "Release to dock on the right",
   "search": "Search sessions",
   "newSession": "New session",
   "empty": "No sessions yet",
@@ -13,6 +16,8 @@
   "noRoot": "Select a workspace session first",
   "drop": "Drop here to dock",
   "drag": "Drag a tab to either sidebar; drop before a tab to reorder",
+  "nativeSort": "Drag the title to reorder right-side tabs; use the grip to move between sidebars",
+  "crossSideDrag": "Drag the grip to move to the other sidebar",
   "reset": "Reset layout",
   "native": "Use native layout",
   "resume": "Return to draggable layout",
@@ -121,5 +126,13 @@
   "term.exited": "Process exited",
   "term.readonly": "This terminal view is read-only.",
   "term.control": "Take input control",
-  "term.closeFailed": "Terminal cleanup failed; retry is available."
+  "term.closeFailed": "Terminal cleanup failed; retry is available.",
+  "backToChat": "Back to conversation",
+  "chooseFile": "Choose a file from the sidebar",
+  "source": "Source",
+  "rendered": "Preview",
+  "nativeFilesMoved": "The file tree is on the left. Opened files appear in right-sidebar tabs.",
+  "nativeFilesOpenRight": "Open files on the right",
+  "nativeFilesUnavailable": "The native file component is unavailable",
+  "nativeFilesDrag": "Show files; drag to a sidebar to move the file panel (Alt+← / →)"
 }

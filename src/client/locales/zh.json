@@ -1,6 +1,9 @@
 {
   "workspaces": "工作区",
   "files": "文件",
+  "nativePanels": "拖拽组件",
+  "nativeFilesLeft": "左侧文件",
+  "dropRight": "松开以停靠到右侧",
   "search": "搜索会话",
   "newSession": "新建会话",
   "empty": "暂无会话",
@@ -13,6 +16,8 @@
   "noRoot": "请先选择一个工作区会话",
   "drop": "拖到这里停靠",
   "drag": "拖动标签可移到另一侧；拖到标签前可排序",
+  "nativeSort": "拖动标题可在右侧排序；六点手柄用于跨侧栏移动",
+  "crossSideDrag": "拖动六点手柄可移到另一侧栏",
   "reset": "恢复默认布局",
   "native": "使用原生布局",
   "resume": "返回拖拽布局",
@@ -121,5 +126,13 @@
   "term.exited": "进程已退出",
   "term.readonly": "此终端当前为只读。",
   "term.control": "接管输入",
-  "term.closeFailed": "终端结束失败，可重试。"
+  "term.closeFailed": "终端结束失败，可重试。",
+  "backToChat": "返回对话",
+  "chooseFile": "从侧栏选择文件",
+  "source": "源码",
+  "rendered": "预览",
+  "nativeFilesMoved": "文件树已移至左侧。打开的文件显示在右侧标签页。",
+  "nativeFilesOpenRight": "在右侧打开文件",
+  "nativeFilesUnavailable": "原生文件组件暂不可用",
+  "nativeFilesDrag": "显示文件；拖动到侧栏可移动文件组件（Alt+← / →）"
 }
